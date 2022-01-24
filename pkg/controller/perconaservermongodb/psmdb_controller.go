@@ -754,11 +754,22 @@ func (r *ReconcilePerconaServerMongoDB) deleteMongos(cr *api.PerconaServerMongoD
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return errors.Wrap(err, "failed to delete mongos deployment")
 	}
-
-	mongosSvc := psmdb.MongosService(cr)
-	err = r.client.Delete(context.TODO(), &mongosSvc)
+	list := new(corev1.ServiceList)
+	err = r.client.List(context.TODO(),
+		list,
+		&client.ListOptions{
+			Namespace:     cr.Namespace,
+			LabelSelector: labels.SelectorFromSet(mongosLabels(cr)),
+		},
+	)
 	if err != nil && !k8serrors.IsNotFound(err) {
-		return errors.Wrap(err, "failed to delete mongos service")
+		return errors.Wrap(err, "failed to get mongos services")
+	}
+	for _, service := range list.Items {
+		err = r.client.Delete(context.TODO(), &service)
+		if err != nil && !k8serrors.IsNotFound(err) {
+			return errors.Wrap(err, "failed to delete mongos services")
+		}
 	}
 
 	return nil
@@ -916,7 +927,7 @@ func (r *ReconcilePerconaServerMongoDB) reconcileMongos(cr *api.PerconaServerMon
 
 	uptodate, err := r.isAllSfsUpToDate(cr)
 	if err != nil {
-		return errors.Wrap(err, "failed to chaeck if all sfs are up to date")
+		return errors.Wrap(err, "failed to check if all sfs are up to date")
 	}
 
 	rstRunning, err := r.isRestoreRunning(cr)
@@ -1048,20 +1059,25 @@ func (r *ReconcilePerconaServerMongoDB) reconcileMongos(cr *api.PerconaServerMon
 	if err != nil {
 		return errors.Wrap(err, "reconcile PodDisruptionBudget for mongos deployment")
 	}
-
-	mongosSvc := psmdb.MongosService(cr)
-	err = setControllerReference(cr, &mongosSvc, r.scheme)
+	mongosPods, err := r.getMongosPods(cr)
 	if err != nil {
-		return errors.Wrapf(err, "set owner ref for service %s", mongosSvc.Name)
+		return errors.Wrap(err, "get mongos pods")
 	}
 
-	mongosSvc.Spec = psmdb.MongosServiceSpec(cr)
+	for _, pod := range mongosPods.Items {
+		mongosSvc := psmdb.MongosService(cr, pod.Name)
+		err = setControllerReference(cr, &mongosSvc, r.scheme)
+		if err != nil {
+			return errors.Wrapf(err, "set owner ref for service %s", mongosSvc.Name)
+		}
 
-	err = r.createOrUpdate(&mongosSvc)
-	if err != nil {
-		return errors.Wrap(err, "create or update mongos service")
+		mongosSvc.Spec = psmdb.MongosServiceSpec(cr)
+
+		err = r.createOrUpdate(&mongosSvc)
+		if err != nil {
+			return errors.Wrap(err, "create or update mongos service")
+		}
 	}
-
 	return nil
 }
 
