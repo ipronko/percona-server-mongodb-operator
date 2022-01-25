@@ -161,9 +161,9 @@ function main() {
 	wait_for_running "${cluster}-cfg" "${CLUSTER_SIZE}" "false"
 	wait_cluster_consistency "${cluster}" "${CLUSTER_SIZE}"
 	run_mongos 'db.createUser({user: "myApp", pwd: "myPass", roles: [{ db: "myApp", role: "readWrite" }]})' \
-		"userAdmin:userAdmin123456@${cluster}-mongos.${namespace}"
+		"userAdmin:userAdmin123456@${cluster}-mongos-0.${namespace}"
 
-	run_mongos 'use myApp\n db.test.insert({ x: 100500 })' "myApp:myPass@${cluster}-mongos.${namespace}"
+	run_mongos 'use myApp\n db.test.insert({ x: 100500 })' "myApp:myPass@${cluster}-mongos-0.${namespace}"
 
 	compare_generation "1" "statefulset" "${cluster}-rs0"
 	compare_generation "1" "statefulset" "${cluster}-cfg"
@@ -208,7 +208,7 @@ function main() {
 	wait_for_running "${cluster}-rs0" "${CLUSTER_SIZE}" "false"
 	wait_for_running "${cluster}-cfg" "${CLUSTER_SIZE}" "false"
 	wait_cluster_consistency "${cluster}" "${CLUSTER_SIZE}"
-	simple_data_check "${cluster}" "${CLUSTER_SIZE}" 1 "-mongos"
+	simple_data_check "${cluster}" "${CLUSTER_SIZE}" 1 "-mongos-0"
 	check_applied_images "all"
 	compare_generation "2" "statefulset" "${cluster}-rs0"
 	compare_generation "2" "statefulset" "${cluster}-cfg"

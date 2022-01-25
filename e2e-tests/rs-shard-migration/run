@@ -45,9 +45,9 @@ function main() {
     fi
     # Migration to shards wipes out rs users. Let's recreate them
     run_mongos 'db.createUser({user: "myApp", pwd: "myPass", roles: [{ db: "myApp", role: "readWrite" }]})' \
-                "userAdmin:userAdmin123456@${cluster}-mongos.${namespace}"
+                "userAdmin:userAdmin123456@${cluster}-mongos-0.${namespace}"
 
-    simple_data_check "${cluster}" "${CLUSTER_SIZE}" 1 "-mongos"
+    simple_data_check "${cluster}" "${CLUSTER_SIZE}" 1 "-mongos-0"
 
     if [[ -z "$(get_shard_parameter ${cluster} ${namespace} lastCommitedOpTime)" ]] \
        && [[ -z "$(get_shard_parameter ${cluster} ${namespace} '$configServerState.opTime.ts')" ]]; then # for mongo 3.6
@@ -64,7 +64,7 @@ function main() {
 
     if [[ ! -z "$(get_shard_parameter ${cluster} ${namespace} lastCommitedOpTime)" ]] \
        || [[ -n "$(kubectl_bin get deployments -o jsonpath='{.items[?(@.metadata.name == "'"${cluster}-mongos"'")].metadata.name}')" ]] \
-       || [[ -n "$(kubectl_bin get service -o jsonpath='{.items[?(@.metadata.name == "'"${cluster}-mongos"'")].metadata.name}')" ]] \
+       || [[ -n "$(kubectl_bin get service -o jsonpath='{.items[?(@.metadata.name == "'"${cluster}-mongos-0"'")].metadata.name}')" ]] \
        || [[ -n "$(kubectl_bin get service -o jsonpath='{.items[?(@.metadata.name == "'"${cluster}-cfg"'")].metadata.name}')" ]] \
        || [[ -n "$(kubectl_bin get statefulset -o jsonpath='{.items[?(@.metadata.name == "'"${cluster}-cfg"'")].metadata.name}')" ]]; then
         echo "Transition to replicaset cluster has not been done well. Cluster does not work properly or some leftovers still exist"

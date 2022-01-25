@@ -105,17 +105,17 @@ function main() {
 	desc 'checking write/read'
 	run_mongos \
 		'db.createUser({user:"myApp",pwd:"myPass",roles:[{db:"myApp",role:"readWrite"}]})' \
-		"userAdmin:userAdmin123456@$cluster-mongos.$namespace"
+		"userAdmin:userAdmin123456@$cluster-mongos-0.$namespace"
 	sleep 2
 	run_mongos \
 		'use myApp\n db.test.insert({ x: 100500 })' \
-		"myApp:myPass@$cluster-mongos.$namespace"
-	simple_data_check "${cluster}" 4 1 "-mongos"
+		"myApp:myPass@$cluster-mongos-0.$namespace"
+	simple_data_check "${cluster}" 4 1 "-mongos-0"
 
 	desc 'checking dev version service'
 	stop_cluster ${cluster}
 	start_cluster ${cluster}
-	simple_data_check "${cluster}" 4 1 "-mongos"
+	simple_data_check "${cluster}" 4 1 "-mongos-0"
 
 	kubectl_bin delete -f $deploy_dir/cr.yaml
 
@@ -137,12 +137,12 @@ function main() {
 	desc 'checking write/read'
 	run_mongos \
 		'db.createUser({user:"myApp",pwd:"myPass",roles:[{db:"myApp",role:"readWrite"}]})' \
-		"userAdmin:userAdmin123456@$cluster-mongos.$namespace"
+		"userAdmin:userAdmin123456@$cluster-mongos-0.$namespace"
 	sleep 2
 	run_mongos \
 		'use myApp\n db.test.insert({ x: 100500 })' \
-		"myApp:myPass@$cluster-mongos.$namespace"
-	simple_data_check "${cluster}" 4 1 "-mongos"
+		"myApp:myPass@$cluster-mongos-0.$namespace"
+	simple_data_check "${cluster}" 4 1 "-mongos-0"
 
 	destroy $namespace
 }
