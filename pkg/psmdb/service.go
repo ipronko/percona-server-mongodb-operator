@@ -201,6 +201,47 @@ func GetReplsetAddrs(cl client.Client, m *api.PerconaServerMongoDB, rsName strin
 	return addrs, nil
 }
 
+// GetMongosAddrs returns a slice of mongos addresses
+func GetMongosAddrs(client client.Client, cr *api.PerconaServerMongoDB, pods []corev1.Pod) ([]string, error) {
+	addrs := make([]string, 0)
+
+	for i := range pods {
+		var host string
+		var err error
+		serviceName := cr.Name + "-mongos-" + strconv.Itoa(i)
+		if mongos := cr.Spec.Sharding.Mongos; mongos.Expose.ExposeType == corev1.ServiceTypeLoadBalancer {
+			host, err = loadBalancerServiceEndpoint(client, serviceName, cr.Namespace)
+			if err != nil {
+				return nil, errors.Wrap(err, "service endpoint")
+			}
+		} else {
+			host = serviceName + "." + cr.Namespace + "." + cr.Spec.ClusterServiceDNSSuffix
+		}
+		addrs = append(addrs, host)
+	}
+
+	return addrs, nil
+}
+
+func loadBalancerServiceEndpoint(client client.Client, serviceName, namespace string) (string, error) {
+	host := ""
+	srv := corev1.Service{}
+	err := client.Get(context.TODO(), types.NamespacedName{
+		Namespace: namespace,
+		Name:      serviceName,
+	}, &srv)
+	if err != nil {
+		return "", errors.Wrap(err, "get service")
+	}
+	for _, i := range srv.Status.LoadBalancer.Ingress {
+		host = i.IP
+		if len(i.Hostname) > 0 {
+			host = i.Hostname
+		}
+	}
+	return host, nil
+}
+
 // MongoHost returns the mongo host for given pod
 func MongoHost(cl client.Client, m *api.PerconaServerMongoDB, rsName string, rsExposed bool, pod corev1.Pod) (string, error) {
 	if rsExposed {

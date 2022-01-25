@@ -1,11 +1,11 @@
 package psmdb
 
 import (
-	"strconv"
-	"strings"
-
+	"context"
 	"github.com/pkg/errors"
 	mgo "go.mongodb.org/mongo-driver/mongo"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
@@ -49,9 +49,29 @@ func MongoClient(k8sclient client.Client, cr *api.PerconaServerMongoDB, rs api.R
 }
 
 func MongosClient(k8sclient client.Client, cr *api.PerconaServerMongoDB, c Credentials) (*mgo.Client, error) {
+	list := corev1.PodList{}
+	err := k8sclient.List(context.TODO(),
+		&list,
+		&client.ListOptions{
+			Namespace: cr.Namespace,
+			LabelSelector: labels.SelectorFromSet(map[string]string{
+				"app.kubernetes.io/name":       "percona-server-mongodb",
+				"app.kubernetes.io/instance":   cr.Name,
+				"app.kubernetes.io/component":  "mongos",
+				"app.kubernetes.io/managed-by": "percona-server-mongodb-operator",
+				"app.kubernetes.io/part-of":    "percona-server-mongodb",
+			}),
+		},
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "list mongos pods")
+	}
+	hosts, err := GetMongosAddrs(k8sclient, cr, list.Items)
+	if err != nil {
+		return nil, errors.Wrap(err, "get mongos addrs")
+	}
 	conf := mongo.Config{
-		Hosts: []string{strings.Join([]string{cr.Name + "-mongos", cr.Namespace, cr.Spec.ClusterServiceDNSSuffix}, ".") +
-			":" + strconv.Itoa(int(cr.Spec.Sharding.Mongos.Port))},
+		Hosts:    hosts,
 		Username: c.Username,
 		Password: c.Password,
 	}
