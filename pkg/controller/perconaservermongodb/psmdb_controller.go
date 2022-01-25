@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -1064,8 +1065,8 @@ func (r *ReconcilePerconaServerMongoDB) reconcileMongos(cr *api.PerconaServerMon
 		return errors.Wrap(err, "get mongos pods")
 	}
 
-	for _, pod := range mongosPods.Items {
-		mongosSvc := psmdb.MongosService(cr, pod.Name)
+	for i := range mongosPods.Items {
+		mongosSvc := psmdb.MongosService(cr, msDepl.Name+"-"+strconv.Itoa(i))
 		err = setControllerReference(cr, &mongosSvc, r.scheme)
 		if err != nil {
 			return errors.Wrapf(err, "set owner ref for service %s", mongosSvc.Name)

@@ -213,12 +213,12 @@ func (r *ReconcilePerconaServerMongoDB) createSSLManualy(cr *api.PerconaServerMo
 
 func getShardingSans(cr *api.PerconaServerMongoDB) []string {
 	return []string{
-		cr.Name + "-mongos",
-		cr.Name + "-mongos" + "." + cr.Namespace,
-		cr.Name + "-mongos" + "." + cr.Namespace + "." + cr.Spec.ClusterServiceDNSSuffix,
-		"*." + cr.Name + "-mongos",
-		"*." + cr.Name + "-mongos" + "." + cr.Namespace,
-		"*." + cr.Name + "-mongos" + "." + cr.Namespace + "." + cr.Spec.ClusterServiceDNSSuffix,
+		cr.Name + "-mongos-*",
+		cr.Name + "-mongos-*" + "." + cr.Namespace,
+		cr.Name + "-mongos-*" + "." + cr.Namespace + "." + cr.Spec.ClusterServiceDNSSuffix,
+		"*." + cr.Name + "-mongos-*",
+		"*." + cr.Name + "-mongos-*" + "." + cr.Namespace,
+		"*." + cr.Name + "-mongos-*" + "." + cr.Namespace + "." + cr.Spec.ClusterServiceDNSSuffix,
 		cr.Name + "-" + api.ConfigReplSetName,
 		cr.Name + "-" + api.ConfigReplSetName + "." + cr.Namespace,
 		cr.Name + "-" + api.ConfigReplSetName + "." + cr.Namespace + "." + cr.Spec.ClusterServiceDNSSuffix,
